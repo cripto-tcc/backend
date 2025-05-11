@@ -34,9 +34,9 @@ Este projeto é um backend em Python usando FastAPI, que processa solicitações
 POST /process
 ```json
 {
-  "walletAddress": "0x123...",
-  "chain": "ETH",
-  "input": "Quero trocar 10 BTC por USDC"
+    "walletAddress": "0x1234567890abcdef1234567890abcdef12345678",
+    "chain": "ETH",
+    "input": "Se eu transformar 234000 USDC em WBTC, quantos wbtc eu teria?"
 }
 ```
 

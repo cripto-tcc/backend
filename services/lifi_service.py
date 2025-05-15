@@ -50,9 +50,11 @@ class LifiService:
 
         from_token_address = from_token_info["address"]
         to_token_address = to_token_info["address"]
-        decimals = from_token_info["decimals"]
+        from_token_decimals = from_token_info["decimals"]
+        to_token_decimals = to_token_info["decimals"]
+
         try:
-            from_amount = str(int(float(amount) * (10 ** decimals)))
+            from_amount = str(int(float(amount) * (10 ** from_token_decimals)))
         except Exception:
             return {"error": "Valor de quantidade inválido."}
 
@@ -67,4 +69,9 @@ class LifiService:
         print("URL da LI.FI:", url)
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
-            return response.json()
+            quote = response.json()
+            
+            quote['fromToken'] = from_token
+            quote['toToken'] = to_token
+            
+            return quote

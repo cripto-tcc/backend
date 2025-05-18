@@ -11,9 +11,8 @@ class RouterAgent:
         print("Resultado da classificação e extração:", result)
         intent = result.get("intent")
         if intent == "cotacao":
-            # Passa os dados extraídos para o agente de cotação
             quote = await self.quote_agent.get_quote(user_request, result)
-            friendly_message = await self.openai_service.generate_friendly_message(quote)
-            return friendly_message
+            async for chunk in self.openai_service.generate_friendly_message(quote):
+                yield chunk
         else:
-            return "Intenção não suportada no momento."
+            yield "Intenção não suportada no momento."

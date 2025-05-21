@@ -67,7 +67,7 @@ class OpenAIService:
             "- IMPORTANTE: Use ** para negrito e * para itálico, exatamente como mostrado nos exemplos.\n"
             "\n"
             "# Exemplo de estrutura que pode ser usada (não precisa ser idêntica sempre, mas mantenha o mesmo tipo de clareza):\n"
-            "Com 100 USDC, você vai receber aproximadamente **0,000973 WBTC**.\n"
+            "Com [fromAmount] [fromToken], você vai receber aproximadamente **[toAmount] [toToken]**.\n"
             "\n"
             "⛽ Taxas estimadas da rede: **~$5,65** em ETH\n"
             "⏱ Tempo de execução: ~30 segundos\n"

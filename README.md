@@ -31,6 +31,7 @@ Este projeto é um backend em Python usando FastAPI, que processa solicitações
 
    - Crie um arquivo `.env` na raiz do projeto, siga o exemplo da .env.example
      ```
+     CORS_ORIGIN=url-porta-frontend (ex: http://localhost:5173)
      OPENAI_API_KEY=sua-chave-openai
      ```
 

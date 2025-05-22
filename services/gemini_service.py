@@ -32,12 +32,12 @@ class GeminiService:
         response = await self.model.generate_content_async(prompt)
         
         content = response.text.strip()
-        print("Resposta bruta do Gemini (classify_intent_and_extract):", content)
+        #print("Resposta bruta do Gemini (classify_intent_and_extract):", content)
         try:
             # Attempt to remove markdown and parse JSON
             cleaned_content = content.replace('```json', '').replace('```', '').strip()
             data = json.loads(cleaned_content)
-            print("Dados extraídos:", data) 
+            #print("Dados extraídos:", data) 
             return data
         except Exception as e:
             print(f"Erro ao fazer parse do JSON: {e}. Conteúdo: {content}")
@@ -45,7 +45,7 @@ class GeminiService:
             return {"intent": content.lower()}
 
     async def generate_friendly_message(self, quote_response):
-        print("Quote response recebido:", quote_response)
+        #print("Quote response recebido:", quote_response)
         prompt = (
             "Receba o seguinte JSON de cotação de troca de tokens e gere uma mensagem amigável, clara e objetiva explicando para o usuário o resultado da cotação.\n"
             "\n"
@@ -79,7 +79,7 @@ class GeminiService:
             f"JSON: {json.dumps(quote_response, ensure_ascii=False)}"
         )
 
-        print("\n\n ###Prompt enviado ao Gemini (generate_friendly_message):", prompt, "\n\n")
+        print("\n\n !!!!!! Prompt enviado ao Gemini (generate_friendly_message):", prompt, "\n\n")
         
         # Gemini API uses generate_content for streaming as well
         # The response structure for streaming chunks is different.

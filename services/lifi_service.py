@@ -1,18 +1,58 @@
 import httpx
 
-# Mapeamento de tokens para Ethereum com endereço e decimais
-TOKEN_INFO = {
-    "ETH": {
-        "WBTC": {
-            "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-            "decimals": 8
-        },
-        "USDC": {
-            "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            "decimals": 6
-        }
-    }
-}
+# Dicionário global para armazenar os tokens de cada rede após integração com LI.FI
+TOKEN_INFO = {}
+
+import asyncio
+
+async def fetch_and_store_tokens(chain_name):
+    chain_name_upper = chain_name.upper()
+    url = f"https://li.quest/v1/tokens?chains={chain_name}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        data = response.json()
+        tokens_by_chain = data.get("tokens", {})
+        # tokens_by_chain é um dict: {chainId: [tokens]}
+        # Vamos armazenar por symbol para facilitar o acesso
+        # Agora vamos lidar com tokens duplicados, mantendo o de maior valor
+        tokens_dict = {}
+        for chain_id, tokens in tokens_by_chain.items():
+            # Primeiro, agrupamos todos os tokens pelo símbolo
+            tokens_by_symbol = {}
+            for token in tokens:
+                symbol = token.get("symbol", "").upper()
+                if symbol:
+                    if symbol not in tokens_by_symbol:
+                        tokens_by_symbol[symbol] = []
+                    tokens_by_symbol[symbol].append(token)
+            
+            # Agora, para cada símbolo, selecionamos o token com maior valor
+            for symbol, token_list in tokens_by_symbol.items():
+                # Se houver mais de um token com o mesmo símbolo, mostramos um log
+                #if len(token_list) > 1:
+                    #print(f"Encontrados {len(token_list)} tokens com o símbolo {symbol}:")
+                    #for t in token_list:
+                        #print(f"  - {t.get('name')}: {t.get('priceUSD') or 0} USD (address: {t.get('address')})")
+                
+                # Ordenamos por priceUSD (do maior para o menor)
+                # Tratamos None como 0 para evitar erros de comparação
+                sorted_tokens = sorted(token_list, key=lambda t: float(t.get("priceUSD", 0) or 0), reverse=True)
+                # Pegamos o primeiro (maior valor)
+                best_token = sorted_tokens[0]
+                
+                if len(token_list) > 1:
+                    print(f"Selecionado para {symbol}: {best_token.get('name')} com valor {best_token.get('priceUSD')} USD")
+                
+                tokens_dict[symbol] = {
+                    "address": best_token.get("address"),
+                    "decimals": best_token.get("decimals"),
+                    "name": best_token.get("name"),
+                    "priceUSD": best_token.get("priceUSD"),
+                    "logoURI": best_token.get("logoURI"),
+                    "chainId": best_token.get("chainId"),
+                }
+        TOKEN_INFO[chain_name_upper] = tokens_dict
+
 
 def convert_quote_to_human_readable(quote, from_token_decimals, to_token_decimals):
     # Converte os principais campos numéricos do JSON para formato "humano"
@@ -66,7 +106,7 @@ class LifiService:
             f"&fromAddress={user_request.walletAddress}"
             f"&fromAmount={from_amount}"
         )
-        print("URL da LI.FI:", url)
+        print(" \n ### URL da LI.FI:", url)
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             quote = response.json()

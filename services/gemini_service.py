@@ -1,16 +1,18 @@
 import os
 import json
-import openai
+import google.generativeai as genai
 
-class OpenAIService:
+class GeminiService:
     def __init__(self):
-        self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        # For text-only input
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
 
     async def classify_intent_and_extract(self, user_input):
         prompt = (
             "Classifique a intenção do usuário a partir do input abaixo. "
             "Se a intenção for cotação, extraia também os campos fromToken, toToken e fromAmount do input, e responda SOMENTE neste formato JSON:\n"
-            '{"intent": "cotacao", "fromToken": "BTC", "toToken": "USDC", "fromAmount": "10"}\n'
+            '{\"intent\": \"cotacao\", \"fromToken\": \"BTC\", \"toToken\": \"USDC\", \"fromAmount\": \"10\"}\n'
             "IMPORTANTE: \n"
             "- fromToken: é o token que o usuário QUER TROCAR (o que ele TEM)\n"
             "- toToken: é o token que o usuário QUER RECEBER\n"
@@ -24,22 +26,22 @@ class OpenAIService:
             "Se não for cotação, responda apenas com a intenção (swap ou transferencia).\n"
             f"Input: {user_input}"
         )
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Você é um classificador de intenções e extrator de entidades para operações de cripto. Preste atenção na ordem dos tokens: fromToken é o que o usuário TEM, toToken é o que ele quer RECEBER."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=100,
-            temperature=0
-        )
-        content = response.choices[0].message.content.strip()
-        print("Resposta bruta do ChatGPT (classify_intent_and_extract):", content)
+        
+        # Gemini API uses generate_content instead of chat.completions.create
+        # The response structure is also different.
+        response = await self.model.generate_content_async(prompt)
+        
+        content = response.text.strip()
+        print("Resposta bruta do Gemini (classify_intent_and_extract):", content)
         try:
-            data = json.loads(content)
-            print("Dados extraídos:", data)  # Log adicional
+            # Attempt to remove markdown and parse JSON
+            cleaned_content = content.replace('```json', '').replace('```', '').strip()
+            data = json.loads(cleaned_content)
+            print("Dados extraídos:", data) 
             return data
-        except Exception:
+        except Exception as e:
+            print(f"Erro ao fazer parse do JSON: {e}. Conteúdo: {content}")
+            # Fallback if JSON parsing fails
             return {"intent": content.lower()}
 
     async def generate_friendly_message(self, quote_response):
@@ -70,36 +72,19 @@ class OpenAIService:
             "Com [fromAmount] [fromToken], você vai receber aproximadamente **[toAmount] [toToken]**.\n"
             "\n"
             "⛽ Taxas estimadas da rede: **~$5,65** em ETH\n"
-            "⏱ Tempo de execução: ~30 segundos\n"
+            "🕝 Tempo de execução: ~30 segundos\n"
             "\n"
             "*Lembrando que isso são cotações. Quando for fazer a troca, se atente nos valores atualizados e reais da troca.*\n"
             "\n"
             f"JSON: {json.dumps(quote_response, ensure_ascii=False)}"
         )
 
-        print("\n\n ###Prompt enviado ao GPT (generate_friendly_message):", prompt, "\n\n")
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Você é um assistente que gera mensagens amigáveis para usuários de cripto. Use ** para negrito e * para itálico."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=300,
-            temperature=0.7,
-            stream=True
-        )
+        print("\n\n ###Prompt enviado ao Gemini (generate_friendly_message):", prompt, "\n\n")
         
-        buffer = ""
-        async for chunk in response:
-            if chunk.choices[0].delta.content is not None:
-                content = chunk.choices[0].delta.content
-                buffer += content
-                if "**" in buffer:
-                    yield buffer
-                    buffer = ""
-                elif len(buffer) > 10:
-                    yield buffer
-                    buffer = ""
+        # Gemini API uses generate_content for streaming as well
+        # The response structure for streaming chunks is different.
+        response_stream = await self.model.generate_content_async(prompt, stream=True)
         
-        if buffer:
-            yield buffer
+        async for chunk in response_stream:
+            if chunk.text: # Check if text is available in the chunk
+                yield chunk.text

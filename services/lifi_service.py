@@ -115,3 +115,51 @@ class LifiService:
             quote['toToken'] = to_token
             
             return quote
+        
+    async def get_swap_quote(self, user_request, extracted_data):
+        """
+        Obtém cotação de swap do LI.FI com dados de transação
+        Similar ao get_quote, mas retorna dados completos para executar o swap
+        """
+        chain = user_request.chain.upper()
+        # Usa os dados extraídos pelo Gemini
+        from_token = extracted_data.get("fromToken", "").upper()
+        to_token = extracted_data.get("toToken", "").upper()
+        amount = extracted_data.get("fromAmount", "")
+        print(f"Swap - Extraído: from_token={from_token}, to_token={to_token}, amount={amount}")
+
+        # Obter info dos tokens
+        from_token_info = TOKEN_INFO.get(chain, {}).get(from_token)
+        to_token_info = TOKEN_INFO.get(chain, {}).get(to_token)
+        if not from_token_info or not to_token_info:
+            return {"error": "Token ou chain não suportado."}
+
+        from_token_address = from_token_info["address"]
+        to_token_address = to_token_info["address"]
+        from_token_decimals = from_token_info["decimals"]
+        to_token_decimals = to_token_info["decimals"]
+
+        try:
+            from_amount = str(int(float(amount) * (10 ** from_token_decimals)))
+        except Exception:
+            return {"error": "Valor de quantidade inválido."}
+
+        url = (
+            f"https://li.quest/v1/quote?fromChain={chain}"
+            f"&toChain={chain}"
+            f"&fromToken={from_token_address}"
+            f"&toToken={to_token_address}"
+            f"&fromAddress={user_request.walletAddress}"
+            f"&fromAmount={from_amount}"
+        )
+        print(" \n ### URL da LI.FI (Swap):", url)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            swap_quote = response.json()
+            
+            # Adicionar informações de token para o frontend
+            swap_quote['fromToken'] = from_token
+            swap_quote['toToken'] = to_token
+            
+            # Retornar dados completos para o swap, incluindo transactionRequest
+            return swap_quote

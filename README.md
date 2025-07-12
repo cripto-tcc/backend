@@ -37,6 +37,7 @@ Este projeto é um backend em Python usando FastAPI, que processa solicitações
 
 3. Inicie o servidor FastAPI:
    uvicorn main:app --reload
+   ou python -m uvicorn main:app --reload (terminais Git Bash on Windows)
 
 ## Exemplo de requisição
 

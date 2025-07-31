@@ -130,7 +130,7 @@ class GeminiService:
             f"JSON: {json.dumps(swap_response, ensure_ascii=False)}"
         )
 
-        print("\n\n !!!!!! Prompt enviado ao Gemini (generate_swap_message):", prompt, "\n\n")
+        print("\n\n !!!!!! Prompt enviado ao Gemini (generate_swap_message)", "\n\n")
         
         # Gemini API uses generate_content for streaming as well
         response_stream = await self.model.generate_content_async(prompt, stream=True)

@@ -31,14 +31,34 @@ class SwapAgent:
     async def get_swap(self, user_request, extracted_data):
         chain = user_request.chain
         # Busca e armazena os tokens da rede antes de qualquer coisa
-        await fetch_and_store_tokens(chain)
+        try:
+            await fetch_and_store_tokens(chain)
+        except Exception as e:
+            return {"error": f"Erro ao buscar tokens da rede {chain}. Tente novamente."}
+            
         swap_data = await self.lifi_service.get_swap_quote(user_request, extracted_data)
+        
+        # Verifica se o swap falhou
+        if "error" in swap_data:
+            return swap_data
+            
         # Descobre os decimais dos tokens para conversão
         chain_upper = chain.upper()
         from_token = extracted_data.get("fromToken", "").upper()
         to_token = extracted_data.get("toToken", "").upper()
-        from_token_decimals = TOKEN_INFO.get(chain_upper, {}).get(from_token, {}).get("decimals", 6)
-        to_token_decimals = TOKEN_INFO.get(chain_upper, {}).get(to_token, {}).get("decimals", 6)
+        
+        # Verifica se os tokens foram encontrados
+        from_token_info = TOKEN_INFO.get(chain_upper, {}).get(from_token)
+        to_token_info = TOKEN_INFO.get(chain_upper, {}).get(to_token)
+        
+        if not from_token_info:
+            return {"error": f"Token {from_token} não encontrado na rede {chain}."}
+        if not to_token_info:
+            return {"error": f"Token {to_token} não encontrado na rede {chain}."}
+            
+        from_token_decimals = from_token_info.get("decimals", 6)
+        to_token_decimals = to_token_info.get("decimals", 6)
+        
         swap_data = convert_quote_to_human_readable(swap_data, from_token_decimals, to_token_decimals)
         swap_data = filter_swap_fields(swap_data)
         return swap_data

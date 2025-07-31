@@ -8,10 +8,13 @@ import asyncio
 async def fetch_and_store_tokens(chain_name):
     chain_name_upper = chain_name.upper()
     url = f"https://li.quest/v1/tokens?chains={chain_name}"
+    
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
         data = response.json()
+        
         tokens_by_chain = data.get("tokens", {})
+        
         # tokens_by_chain é um dict: {chainId: [tokens]}
         # Vamos armazenar por symbol para facilitar o acesso
         # Agora vamos lidar com tokens duplicados, mantendo o de maior valor
@@ -51,6 +54,7 @@ async def fetch_and_store_tokens(chain_name):
                     "logoURI": best_token.get("logoURI"),
                     "chainId": best_token.get("chainId"),
                 }
+        
         TOKEN_INFO[chain_name_upper] = tokens_dict
 
 
@@ -107,14 +111,34 @@ class LifiService:
             f"&fromAmount={from_amount}"
         )
         print(" \n ### URL da LI.FI:", url)
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            quote = response.json()
-            
-            quote['fromToken'] = from_token
-            quote['toToken'] = to_token
-            
-            return quote
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                
+                # Verifica se a requisição foi bem-sucedida
+                if response.status_code != 200:
+                    print(f" DEBUG: Erro na API LI.FI - Status: {response.status_code}")
+                    return {"error": f"Erro na API LI.FI (Status: {response.status_code})"}
+                
+                quote = response.json()
+                
+                # Verifica se a resposta contém erro
+                if "error" in quote:
+                    print(f"🔍 DEBUG: Erro na resposta LI.FI: {quote['error']}")
+                    return {"error": f"Erro na cotação: {quote['error']}"}
+                
+                quote['fromToken'] = from_token
+                quote['toToken'] = to_token
+                
+                return quote
+                
+        except httpx.RequestError as e:
+            print(f"🔍 DEBUG: Erro de conexão com LI.FI: {e}")
+            return {"error": "Erro de conexão com o serviço de cotação. Tente novamente."}
+        except Exception as e:
+            print(f"🔍 DEBUG: Erro inesperado na cotação: {e}")
+            return {"error": "Erro inesperado na cotação. Tente novamente."}
         
     async def get_swap_quote(self, user_request, extracted_data):
         """
@@ -153,13 +177,33 @@ class LifiService:
             f"&fromAmount={from_amount}"
         )
         print(" \n ### URL da LI.FI (Swap):", url)
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            swap_quote = response.json()
-            
-            # Adicionar informações de token para o frontend
-            swap_quote['fromToken'] = from_token
-            swap_quote['toToken'] = to_token
-            
-            # Retornar dados completos para o swap, incluindo transactionRequest
-            return swap_quote
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                
+                # Verifica se a requisição foi bem-sucedida
+                if response.status_code != 200:
+                    print(f"🔍 DEBUG: Erro na API LI.FI (Swap) - Status: {response.status_code}")
+                    return {"error": f"Erro na API LI.FI (Status: {response.status_code})"}
+                
+                swap_quote = response.json()
+                
+                # Verifica se a resposta contém erro
+                if "error" in swap_quote:
+                    print(f"🔍 DEBUG: Erro na resposta LI.FI (Swap): {swap_quote['error']}")
+                    return {"error": f"Erro na cotação de swap: {swap_quote['error']}"}
+                
+                # Adicionar informações de token para o frontend
+                swap_quote['fromToken'] = from_token
+                swap_quote['toToken'] = to_token
+                
+                # Retornar dados completos para o swap, incluindo transactionRequest
+                return swap_quote
+                
+        except httpx.RequestError as e:
+            print(f"🔍 DEBUG: Erro de conexão com LI.FI (Swap): {e}")
+            return {"error": "Erro de conexão com o serviço de cotação. Tente novamente."}
+        except Exception as e:
+            print(f"🔍 DEBUG: Erro inesperado na cotação de swap: {e}")
+            return {"error": "Erro inesperado na cotação de swap. Tente novamente."}

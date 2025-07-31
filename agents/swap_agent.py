@@ -61,4 +61,10 @@ class SwapAgent:
         
         swap_data = convert_quote_to_human_readable(swap_data, from_token_decimals, to_token_decimals)
         swap_data = filter_swap_fields(swap_data)
-        return swap_data
+        
+        # Retorna dados estruturados para o frontend
+        return {
+            "type": "swap_data",
+            "data": swap_data,
+            "message": "Dados da transação preparados com sucesso"
+        }

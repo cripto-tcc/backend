@@ -11,7 +11,6 @@ class RouterAgent:
     async def handle(self, user_request):
         try:
             result = await self.gemini_service.classify_intent_and_extract(user_request.input)
-            print("Resultado da classificação e extração:", result)
             intent = result.get("intent")
             
             if intent == "cotacao":
@@ -23,13 +22,26 @@ class RouterAgent:
                 async for chunk in self.gemini_service.generate_friendly_message(quote):
                     yield chunk
             elif intent == "swap":
-                swap_data = await self.swap_agent.get_swap(user_request, result)
+                swap_result = await self.swap_agent.get_swap(user_request, result)
                 # Verifica se houve erro no swap
-                if "error" in swap_data:
-                    yield f"❌ Erro: {swap_data['error']}"
+                if "error" in swap_result:
+                    yield f"❌ Erro: {swap_result['error']}"
                     return
-                async for chunk in self.gemini_service.generate_swap_message(swap_data):
-                    yield chunk
+                
+                # Se for dados estruturados de swap, gera mensagem e retorna dados
+                if swap_result.get("type") == "swap_data":
+                    # Gera mensagem amigável
+                    async for chunk in self.gemini_service.generate_swap_message(swap_result["data"]):
+                        yield chunk
+                    # Retorna dados da transação
+                    yield {
+                        "type": "transaction",
+                        "data": swap_result["data"]
+                    }
+                else:
+                    # Fallback para dados antigos
+                    async for chunk in self.gemini_service.generate_swap_message(swap_result):
+                        yield chunk
             else:
                 yield "Intenção não suportada no momento."
         except Exception as e:

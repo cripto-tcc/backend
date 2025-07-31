@@ -41,8 +41,6 @@ class QuoteAgent:
         if "error" in quote:
             return quote
             
-        # Print do TOKEN_INFO para debug
-        #print('TOKEN_INFO após integração:', TOKEN_INFO)
         # Descobre os decimais dos tokens para conversão
         chain_upper = chain.upper()
         from_token = extracted_data.get("fromToken", "").upper()

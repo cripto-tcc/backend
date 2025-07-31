@@ -28,7 +28,17 @@ async def process_request(request: Request):
     
     async def generate():
         async for chunk in router_agent.handle(user_request):
-            yield f"data: {json.dumps({'content': chunk})}\n\n"
+            # Se for dados estruturados (dict), trata de forma especial
+            if isinstance(chunk, dict):
+                if chunk.get("type") == "transaction":
+                    # Envia dados da transação para o frontend
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                else:
+                    # Envia outros dados estruturados
+                    yield f"data: {json.dumps(chunk)}\n\n"
+            else:
+                # Envia chunks normais de texto
+                yield f"data: {json.dumps({'content': chunk})}\n\n"
         yield "data: [DONE]\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")

@@ -127,6 +127,7 @@ class GeminiService:
             "\n"
             "Na próxima etapa você poderá revisar todos os detalhes e confirmar a transação.\n"
             "\n"
+            "Deseja continuar com a transação?"
             f"JSON: {json.dumps(swap_response, ensure_ascii=False)}"
         )
 

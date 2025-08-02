@@ -1,18 +1,21 @@
 from services.gemini_service import GeminiService
 from agents.quote_agent import QuoteAgent
 from agents.swap_agent import SwapAgent
+from agents.transfer_agent import TransferAgent
+
 
 class RouterAgent:
     def __init__(self):
         self.gemini_service = GeminiService()
         self.quote_agent = QuoteAgent()
         self.swap_agent = SwapAgent()
+        self.transfer_agent = TransferAgent()
 
     async def handle(self, user_request):
         try:
             result = await self.gemini_service.classify_intent_and_extract(user_request.input)
             intent = result.get("intent")
-            
+
             if intent == "cotacao":
                 quote = await self.quote_agent.get_quote(user_request, result)
                 # Verifica se houve erro na cotação
@@ -40,9 +43,38 @@ class RouterAgent:
                     }
                 else:
                     # Fallback para dados antigos
-                    async for chunk in self.gemini_service.generate_swap_message(swap_result):
+                    async for chunk in self.gemini_service.generate_swap_message(
+                        swap_result
+                    ):
+                        yield chunk
+            elif intent == "transferencia":
+                transfer_result = await self.transfer_agent.get_transfer(
+                    user_request, result
+                )
+                # Verifica se houve erro na transferência
+                if "error" in transfer_result:
+                    yield f"❌ Erro: {transfer_result['error']}"
+                    return
+
+                # Se for dados estruturados de transferência, gera mensagem e retorna dados
+                if transfer_result.get("type") == "transfer_data":
+                    # Gera mensagem amigável
+                    async for chunk in self.gemini_service.generate_transfer_message(
+                        transfer_result["data"]
+                    ):
+                        yield chunk
+                    # Retorna dados da transação
+                    yield {
+                        "type": "transaction",
+                        "data": transfer_result["data"]
+                    }
+                else:
+                    # Fallback para dados antigos
+                    async for chunk in self.gemini_service.generate_transfer_message(
+                        transfer_result
+                    ):
                         yield chunk
             else:
                 yield "Intenção não suportada no momento."
-        except Exception as e:
-            yield f"❌ Erro interno do servidor. Tente novamente."
+        except Exception:
+            yield "❌ Erro interno do servidor. Tente novamente."

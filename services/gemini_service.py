@@ -2,6 +2,7 @@ import os
 import json
 import google.generativeai as genai
 
+
 class GeminiService:
     def __init__(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -25,22 +26,23 @@ class GeminiService:
             "- 'fazer swap de 1 BTC para USDC' -> intent: 'swap', fromToken: 'BTC', toToken: 'USDC', fromAmount: '1'\n"
             "- 'qual a cotação de 1 WBTC em USDC' -> intent: 'cotacao', fromToken: 'WBTC', toToken: 'USDC', fromAmount: '1'\n"
             "- 'quanto vale 1 ETH em USDT' -> intent: 'cotacao', fromToken: 'ETH', toToken: 'USDT', fromAmount: '1'\n"
+            "- 'quero transferir 4 USDC para o endereço 0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD' -> intent: 'transferencia', token: 'USDC', amount: '4', toAddress: '0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD'\n	"
+            "- 'mandar 10 ETH para 0x1234567890123456789012345678901234567890' -> intent: 'transferencia', token: 'ETH', amount: '10', toAddress: '0x1234567890123456789012345678901234567890'\n"
             "\n"
-            "Se não for cotação nem swap, responda apenas com a intenção (transferencia).\n"
             f"Input: {user_input}"
         )
-        
+
         # Gemini API uses generate_content instead of chat.completions.create
         # The response structure is also different.
         response = await self.model.generate_content_async(prompt)
-        
+
         content = response.text.strip()
-        #print("Resposta bruta do Gemini (classify_intent_and_extract):", content)
+        print("Resposta bruta do Gemini (classify_intent_and_extract):", content)
         try:
             # Attempt to remove markdown and parse JSON
             cleaned_content = content.replace('```json', '').replace('```', '').strip()
             data = json.loads(cleaned_content)
-            #print("Dados extraídos:", data) 
+            print("Dados extraídos:", data)
             return data
         except Exception as e:
             print(f"Erro ao fazer parse do JSON: {e}. Conteúdo: {content}")
@@ -48,7 +50,7 @@ class GeminiService:
             return {"intent": content.lower()}
 
     async def generate_friendly_message(self, quote_response):
-        #print("Quote response recebido:", quote_response)
+        print("Quote response recebido:", quote_response)
         prompt = (
             "Receba o seguinte JSON de cotação de troca de tokens e gere uma mensagem amigável, clara e objetiva explicando para o usuário o resultado da cotação.\n"
             "\n"
@@ -89,7 +91,76 @@ class GeminiService:
         response_stream = await self.model.generate_content_async(prompt, stream=True)
         
         async for chunk in response_stream:
-            if chunk.text: # Check if text is available in the chunk
+            if chunk.text:  # Check if text is available in the chunk
+                yield chunk.text
+
+    async def generate_transfer_message(self, transfer_response):
+        """
+        Gera mensagem amigável para transferências, incluindo informações
+        sobre a transação
+        """
+        prompt = (
+            "Receba o seguinte JSON de dados de transferência de tokens e "
+            "gere uma mensagem amigável e clara explicando para o usuário "
+            "o que acontecerá na transação.\n"
+            "\n"
+            "# Instruções obrigatórias:\n"
+            "- Informe que esta é uma transação de TRANSFERÊNCIA "
+            "(envio de tokens)\n"
+            "- Informe quanto o usuário vai enviar (valor + símbolo do "
+            "token), usando o campo `fromAmount`\n"
+            "- Informe para qual endereço será feita a transferência "
+            "(campo `toAddress`)\n"
+            "- Use o campo `fromToken` da resposta para identificar o "
+            "símbolo correto do token\n"
+            "- Sempre exiba a taxa estimada de rede, usando o valor em "
+            "**USD** (campo `amountUSD` dentro de `gasCosts`) e o símbolo "
+            "do token que paga a taxa (campo `symbol`, por ex. ETH). "
+            "Formatação esperada:\n"
+            "  Taxas estimadas da rede: ~$5,50 em ETH\n"
+            "- Informe o tempo estimado de execução em segundos "
+            "(campo `executionDuration`). Exemplo: Tempo de execução: "
+            "~30 segundos\n"
+            "- Utilize o padrão numérico brasileiro: ponto (.) para "
+            "separar milhares e vírgula (,) para separador decimal "
+            "(ex.: 1.234,56).\n"
+            "- Finalize informando que o usuário poderá revisar e confirmar "
+            "a transação na próxima etapa.\n"
+            "\n"
+            "# Regras:\n"
+            "- Deixe claro que esta é uma transação real de transferência, "
+            "não apenas uma simulação\n"
+            "- Não invente dados. Use apenas o que está presente no JSON.\n"
+            "- Não converta valores para outras moedas que não estejam no JSON.\n"
+            "- Seja direto, claro e sem floreios.\n"
+            "- IMPORTANTE: Use ** para negrito e * para itálico.\n"
+            "- IMPORTANTE: Mostre apenas os primeiros 6 e últimos 4 "
+            "caracteres do endereço de destino para segurança\n"
+            "\n"
+            "# Exemplo de estrutura:\n"
+            "📤 **Processo de transferência de tokens iniciado!**\n"
+            "\n"
+            "Você estará enviando [fromAmount] [fromToken] para o endereço "
+            "**0x1234...5678**.\n"
+            "\n"
+            "⛽ Taxas estimadas da rede: **~$5,50** em ETH\n"
+            "🕝 Tempo de execução: ~30 segundos\n"
+            "\n"
+            "Na próxima etapa você poderá revisar todos os detalhes e "
+            "confirmar a transação.\n"
+            "\n"
+            "Deseja continuar com a transferência?"
+            f"JSON: {json.dumps(transfer_response, ensure_ascii=False)}"
+        )
+
+        print("\n\n !!!!!! Prompt enviado ao Gemini "
+              "(generate_transfer_message)", "\n\n")
+
+        # Gemini API uses generate_content for streaming as well
+        response_stream = await self.model.generate_content_async(prompt, stream=True)
+
+        async for chunk in response_stream:
+            if chunk.text:  # Check if text is available in the chunk
                 yield chunk.text
 
     async def generate_swap_message(self, swap_response):

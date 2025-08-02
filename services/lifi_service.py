@@ -175,6 +175,7 @@ class LifiService:
             f"&toToken={to_token_address}"
             f"&fromAddress={user_request.walletAddress}"
             f"&fromAmount={from_amount}"
+            f"&slippage=0.01"
         )
         print(" \n ### URL da LI.FI (Swap):", url)
         

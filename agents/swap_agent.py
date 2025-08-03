@@ -81,6 +81,13 @@ class SwapAgent:
             # Verifica se o token de origem é nativo
             is_from_native = is_native_token(from_token, chain)
             swap_data['transactionRequest']['isNativeToken'] = is_from_native
+            
+            # Adiciona informações do token de origem
+            swap_data['transactionRequest']['fromTokenInfo'] = {
+                "contract": from_token_info.get("address", ""),
+                "decimals": from_token_info.get("decimals", 6),
+                "name": from_token_info.get("name", from_token)
+            }
 
         swap_data = filter_swap_fields(swap_data)
         

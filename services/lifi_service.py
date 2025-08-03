@@ -68,11 +68,7 @@ def convert_quote_to_human_readable(quote, from_token_decimals, to_token_decimal
         quote['fromAmount'] = convert(quote['fromAmount'], from_token_decimals)
     if 'toAmount' in quote:
         quote['toAmount'] = convert(quote['toAmount'], to_token_decimals)
-    if 'estimate' in quote:
-        if 'fromAmount' in quote['estimate']:
-            quote['estimate']['fromAmount'] = convert(quote['estimate']['fromAmount'], from_token_decimals)
-        if 'toAmount' in quote['estimate']:
-            quote['estimate']['toAmount'] = convert(quote['estimate']['toAmount'], to_token_decimals)
+
     return quote
 
 class LifiService:

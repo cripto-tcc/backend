@@ -65,6 +65,11 @@ def create_transaction_data(from_address, to_address, token_symbol, amount, chai
             "chainId": chain_upper,
             "gas": "21000",
             "isNativeToken": is_native,
+            "fromTokenInfo": {
+                "contract": token_address,
+                "decimals": token_decimals,
+                "name": token_info.get("name", token_symbol.upper())
+            }
         }
     }
 

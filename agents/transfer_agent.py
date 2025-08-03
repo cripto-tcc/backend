@@ -1,6 +1,20 @@
 from services.lifi_service import TOKEN_INFO, fetch_and_store_tokens
 
 
+def is_native_token(token_symbol, chain):
+    """
+    Verifica se o token é nativo da rede
+    """
+    native_tokens = {
+        "ETH": ["ETH"],
+        "BAS": ["ETH"],
+        "POL": ["MATIC"]
+    }
+
+    chain_upper = chain.upper()
+    return token_symbol.upper() in native_tokens.get(chain_upper, [])
+
+
 def create_transaction_data(from_address, to_address, token_symbol, amount, chain):
     """
     Cria dados de transação artificiais para transferência
@@ -16,6 +30,9 @@ def create_transaction_data(from_address, to_address, token_symbol, amount, chai
 
     token_address = token_info["address"]
     token_decimals = token_info["decimals"]
+
+    # Verifica se é token nativo
+    is_native = is_native_token(token_symbol, chain)
 
     # Converte o valor para wei/smallest unit
     try:
@@ -47,6 +64,7 @@ def create_transaction_data(from_address, to_address, token_symbol, amount, chai
             "from": from_address,
             "chainId": chain_upper,
             "gas": "21000",
+            "isNativeToken": is_native,
         }
     }
 

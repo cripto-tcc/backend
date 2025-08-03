@@ -42,9 +42,7 @@ async def fetch_and_store_tokens(chain_name):
                 sorted_tokens = sorted(token_list, key=lambda t: float(t.get("priceUSD", 0) or 0), reverse=True)
                 # Pegamos o primeiro (maior valor)
                 best_token = sorted_tokens[0]
-                
-                if len(token_list) > 1:
-                    print(f"Selecionado para {symbol}: {best_token.get('name')} com valor {best_token.get('priceUSD')} USD")
+        
                 
                 tokens_dict[symbol] = {
                     "address": best_token.get("address"),

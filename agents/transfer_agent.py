@@ -1,4 +1,4 @@
-from services.lifi_service import TOKEN_INFO, fetch_and_store_tokens
+from services.lifi_service import TOKEN_INFO, fetch_and_store_tokens, get_gas_price
 
 
 def is_native_token(token_symbol, chain):
@@ -15,7 +15,7 @@ def is_native_token(token_symbol, chain):
     return token_symbol.upper() in native_tokens.get(chain_upper, [])
 
 
-def create_transaction_data(from_address, to_address, token_symbol, amount, chain):
+async def create_transaction_data(from_address, to_address, token_symbol, amount, chain):
     """
     Cria dados de transação artificiais para transferência
     Seguindo o formato do LI.FI mas sem bater na API
@@ -39,6 +39,15 @@ def create_transaction_data(from_address, to_address, token_symbol, amount, chai
         amount_in_wei = str(int(float(amount) * (10 ** token_decimals)))
     except Exception:
         return {"error": "Valor de quantidade inválido."}
+
+    # Busca gas price real da API
+    gas_price_data = await get_gas_price(chain)
+    if "error" in gas_price_data:
+        return {"error": f"Erro ao buscar gas price: {gas_price_data['error']}"}
+    
+    gas_price = gas_price_data.get("gasPrice")
+    if not gas_price:
+        return {"error": "Gas price não encontrado na resposta da API"}
 
     # Cria dados de transação artificiais
     transaction_data = {
@@ -64,6 +73,7 @@ def create_transaction_data(from_address, to_address, token_symbol, amount, chai
             "from": from_address,
             "chainId": chain_upper,
             "gas": "21000",
+            "gasPrice": gas_price,
             "isNativeToken": is_native,
             "fromTokenInfo": {
                 "contract": token_address,
@@ -103,7 +113,7 @@ class TransferAgent:
             return {"error": "Quantidade não especificada."}
 
         # Cria dados de transação
-        transfer_data = create_transaction_data(
+        transfer_data = await create_transaction_data(
             from_address,
             to_address,
             token_symbol,

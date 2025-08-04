@@ -3,6 +3,13 @@ import httpx
 # Dicionário global para armazenar os tokens de cada rede após integração com LI.FI
 TOKEN_INFO = {}
 
+# Mapeamento de chain names para chain IDs
+CHAIN_ID_MAPPING = {
+    "ETH": "0x1",      # Ethereum Mainnet
+    "BAS": "0x2105",  # Base
+    "POL": "0x89"      # Polygon
+}
+
 import asyncio
 
 async def fetch_and_store_tokens(chain_name):
@@ -54,6 +61,37 @@ async def fetch_and_store_tokens(chain_name):
                 }
         
         TOKEN_INFO[chain_name_upper] = tokens_dict
+
+
+async def get_gas_price(chain_name):
+    """
+    Busca o gas price atual da rede usando a API do LI.FI
+    """
+    chain_id = CHAIN_ID_MAPPING.get(chain_name.upper())
+    if not chain_id:
+        return {"error": f"Chain {chain_name} não suportada para gas price"}
+    
+    url = f"https://li.quest/v1/gas/prices/{chain_id}"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            
+            if response.status_code != 200:
+                return {"error": f"Erro ao buscar gas price (Status: {response.status_code})"}
+            
+            gas_data = response.json()
+            
+            # A API retorna o gas price diretamente como número
+            if "standard" in gas_data:
+                # Converte para hexadecimal
+                gas_price_hex = hex(gas_data["standard"])
+                return {"gasPrice": gas_price_hex}
+            else:
+                return {"error": "Dados de gas price não encontrados na resposta"}
+                
+    except Exception as e:
+        return {"error": f"Erro ao buscar gas price: {str(e)}"}
 
 
 def convert_quote_to_human_readable(quote, from_token_decimals, to_token_decimals):

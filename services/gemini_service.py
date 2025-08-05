@@ -22,6 +22,7 @@ class GeminiService:
             "- fromAmount: é a quantidade do fromToken\n"
             "- intent: 'cotacao' para apenas ver preços, 'swap' para executar a troca\n"
             "- Para nomes de tokens, aceite variações como: 'Bitcoin' -> 'BTC', 'Ethereum' -> 'ETH', 'Tether' -> 'USDT', etc.\n"
+            "- Se notar que o usuário errou o nome do token, tente corrigir para o nome correto!\n"
             "\n"
             "Exemplos:\n"
             "- 'quero trocar 1 BTC por USDC' -> intent: 'swap', fromToken: 'BTC', toToken: 'USDC', fromAmount: '1'\n"

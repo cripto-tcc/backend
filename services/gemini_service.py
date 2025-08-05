@@ -1,6 +1,7 @@
 import os
 import json
 import google.generativeai as genai
+from services.token_normalizer import TokenNormalizer
 
 
 class GeminiService:
@@ -20,14 +21,19 @@ class GeminiService:
             "- toToken: é o token que o usuário QUER RECEBER\n"
             "- fromAmount: é a quantidade do fromToken\n"
             "- intent: 'cotacao' para apenas ver preços, 'swap' para executar a troca\n"
+            "- Para nomes de tokens, aceite variações como: 'Bitcoin' -> 'BTC', 'Ethereum' -> 'ETH', 'Tether' -> 'USDT', etc.\n"
             "\n"
             "Exemplos:\n"
             "- 'quero trocar 1 BTC por USDC' -> intent: 'swap', fromToken: 'BTC', toToken: 'USDC', fromAmount: '1'\n"
-            "- 'fazer swap de 1 BTC para USDC' -> intent: 'swap', fromToken: 'BTC', toToken: 'USDC', fromAmount: '1'\n"
+            "- 'fazer swap de 1 Bitcoin para USD Coin' -> intent: 'swap', fromToken: 'Bitcoin', toToken: 'USD Coin', fromAmount: '1'\n"
+            "- 'trocar 2 Ethereum por Tether' -> intent: 'swap', fromToken: 'Ethereum', toToken: 'Tether', fromAmount: '2'\n"
             "- 'qual a cotação de 1 WBTC em USDC' -> intent: 'cotacao', fromToken: 'WBTC', toToken: 'USDC', fromAmount: '1'\n"
             "- 'quanto vale 1 ETH em USDT' -> intent: 'cotacao', fromToken: 'ETH', toToken: 'USDT', fromAmount: '1'\n"
-            "- 'quero transferir 4 USDC para o endereço 0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD' -> intent: 'transferencia', token: 'USDC', amount: '4', toAddress: '0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD'\n	"
-            "- 'mandar 10 ETH para 0x1234567890123456789012345678901234567890' -> intent: 'transferencia', token: 'ETH', amount: '10', toAddress: '0x1234567890123456789012345678901234567890'\n"
+            "- 'cotação de 5 Polygon em Dai' -> intent: 'cotacao', fromToken: 'Polygon', toToken: 'Dai', fromAmount: '5'\n"
+            "- 'quantos ETH vou ter se trocar 1000 USDC?' -> intent: 'cotacao', fromToken: 'USDC', toToken: 'ETH', fromAmount: '1000'\n"
+            "- 'quantos link vou ter se trocar por 1000 dolar?' -> intent: 'cotacao', fromToken: 'dolar', toToken: 'link', fromAmount: '1000'\n"
+            "- 'quero transferir 4 USDC para o endereço 0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD' -> intent: 'transferencia', token: 'USDC', amount: '4', toAddress: '0x6E5e81075873EA1f3fE04ae663111cB47B1c6bCD'\n"
+            "- 'mandar 10 Ethereum para 0x1234567890123456789012345678901234567890' -> intent: 'transferencia', token: 'Ethereum', amount: '10', toAddress: '0x1234567890123456789012345678901234567890'\n"
             "\n"
             f"Input: {user_input}"
         )
@@ -43,7 +49,11 @@ class GeminiService:
             cleaned_content = content.replace('```json', '').replace('```', '').strip()
             data = json.loads(cleaned_content)
             print("Dados extraídos:", data)
-            return data
+            
+            # Normaliza os tokens usando o TokenNormalizer
+            normalized_data = TokenNormalizer.normalize_extracted_data(data)
+            print("Dados após normalização:", normalized_data)
+            return normalized_data
         except Exception as e:
             print(f"Erro ao fazer parse do JSON: {e}. Conteúdo: {content}")
             # Fallback if JSON parsing fails

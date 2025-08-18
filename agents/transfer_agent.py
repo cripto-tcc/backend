@@ -23,33 +23,14 @@ async def get_native_token_price_usd(chain):
     if not coingecko_id:
         return 0
 
-    try:
-        # CoinGecko API gratuita
-        url = (f"https://api.coingecko.com/api/v3/simple/price?"
-               f"ids={coingecko_id}&vs_currencies=usd")
+    url = (f"https://api.coingecko.com/api/v3/simple/price?"
+            f"ids={coingecko_id}&vs_currencies=usd")
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=10) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    price = data.get(coingecko_id, {}).get("usd", 0)
-                    return price
-                else:
-                    # Fallback para valores aproximados se a API falhar
-                    fallback_prices = {
-                        "ETH": 2000,
-                        "BAS": 2000,
-                        "POL": 0.8
-                    }
-                    return fallback_prices.get(chain_upper, 0)
-    except Exception:
-        # Fallback para valores aproximados em caso de erro
-        fallback_prices = {
-            "ETH": 2000,
-            "BAS": 2000,
-            "POL": 0.8
-        }
-        return fallback_prices.get(chain_upper, 0)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=10) as response:
+            data = await response.json()
+            price = data.get(coingecko_id, {}).get("usd", 0)
+            return price
 
 
 def is_native_token(token_symbol, chain):
@@ -188,6 +169,7 @@ async def create_transaction_data(
             "from": from_address,
             "chainId": chain_upper,
             "gas": estimated_gas,
+            "gasLimit": estimated_gas, # 
             "gasPrice": gas_price,
             "isNativeToken": is_native,
             "fromTokenInfo": {

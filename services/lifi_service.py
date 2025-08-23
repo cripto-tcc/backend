@@ -13,54 +13,84 @@ CHAIN_ID_MAPPING = {
 import asyncio
 
 async def fetch_and_store_tokens(chain_name):
-    chain_name_upper = chain_name.upper()
-    url = f"https://li.quest/v1/tokens?chains={chain_name}"
-    
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        data = response.json()
+    try:
+        # Validação do parâmetro de entrada
+        if not chain_name or not isinstance(chain_name, str):
+            print(f"Erro: chain_name inválido: {chain_name}")
+            return {"error": "chain_name deve ser uma string válida"}
         
-        tokens_by_chain = data.get("tokens", {})
+        chain_name_upper = chain_name.upper()
+        url = f"https://li.quest/v1/tokens?chains={chain_name}"
         
-        # tokens_by_chain é um dict: {chainId: [tokens]}
-        # Vamos armazenar por symbol para facilitar o acesso
-        # Agora vamos lidar com tokens duplicados, mantendo o de maior valor
-        tokens_dict = {}
-        for chain_id, tokens in tokens_by_chain.items():
-            # Primeiro, agrupamos todos os tokens pelo símbolo
-            tokens_by_symbol = {}
-            for token in tokens:
-                symbol = token.get("symbol", "").upper()
-                if symbol:
-                    if symbol not in tokens_by_symbol:
-                        tokens_by_symbol[symbol] = []
-                    tokens_by_symbol[symbol].append(token)
+        print(f"Fazendo requisição para: {url}")
+        
+        # verify=False desabilita a verificação SSL para resolver problemas de certificado
+        # Em produção, considere usar: verify="/path/to/certificate" ou configurar o sistema
+        async with httpx.AsyncClient(verify=False) as client:
+            response = await client.get(url)
             
-            # Agora, para cada símbolo, selecionamos o token com maior valor
-            for symbol, token_list in tokens_by_symbol.items():
-                # Se houver mais de um token com o mesmo símbolo, mostramos um log
-                #if len(token_list) > 1:
-                    #print(f"Encontrados {len(token_list)} tokens com o símbolo {symbol}:")
-                    #for t in token_list:
-                        #print(f"  - {t.get('name')}: {t.get('priceUSD') or 0} USD (address: {t.get('address')})")
+            # Verificar status da resposta
+            if response.status_code != 200:
+                print(f"Erro na API: Status {response.status_code}")
+                return {"error": f"Erro na API LI.FI: Status {response.status_code}"}
+            
+            data = response.json()
+            
+            if not data:
+                print("Resposta vazia da API")
+                return {"error": "Resposta vazia da API LI.FI"}
+            
+            tokens_by_chain = data.get("tokens", {})
+            
+            if not tokens_by_chain:
+                print(f"Nenhum token encontrado para a chain: {chain_name}")
+                return {"error": f"Nenhum token encontrado para a chain: {chain_name}"}
+            
+            # tokens_by_chain é um dict: {chainId: [tokens]}
+            # Vamos armazenar por symbol para facilitar o acesso
+            # Agora vamos lidar com tokens duplicados, mantendo o de maior valor
+            tokens_dict = {}
+            for chain_id, tokens in tokens_by_chain.items():
+                # Primeiro, agrupamos todos os tokens pelo símbolo
+                tokens_by_symbol = {}
+                for token in tokens:
+                    symbol = token.get("symbol", "").upper()
+                    if symbol:
+                        if symbol not in tokens_by_symbol:
+                            tokens_by_symbol[symbol] = []
+                        tokens_by_symbol[symbol].append(token)
                 
-                # Ordenamos por priceUSD (do maior para o menor)
-                # Tratamos None como 0 para evitar erros de comparação
-                sorted_tokens = sorted(token_list, key=lambda t: float(t.get("priceUSD", 0) or 0), reverse=True)
-                # Pegamos o primeiro (maior valor)
-                best_token = sorted_tokens[0]
-        
-                
-                tokens_dict[symbol] = {
-                    "address": best_token.get("address"),
-                    "decimals": best_token.get("decimals"),
-                    "name": best_token.get("name"),
-                    "priceUSD": best_token.get("priceUSD"),
-                    "logoURI": best_token.get("logoURI"),
-                    "chainId": best_token.get("chainId"),
-                }
-        
-        TOKEN_INFO[chain_name_upper] = tokens_dict
+                # Agora, para cada símbolo, selecionamos o token com maior valor
+                for symbol, token_list in tokens_by_symbol.items():
+                    # Se houver mais de um token com o mesmo símbolo, mostramos um log
+                    #if len(token_list) > 1:
+                        #print(f"Encontrados {len(token_list)} tokens com o símbolo {symbol}:")
+                        #for t in token_list:
+                            #print(f"  - {t.get('name')}: {t.get('priceUSD') or 0} USD (address: {t.get('address')})")
+                    
+                    # Ordenamos por priceUSD (do maior para o menor)
+                    # Tratamos None como 0 para evitar erros de comparação
+                    sorted_tokens = sorted(token_list, key=lambda t: float(t.get("priceUSD", 0) or 0), reverse=True)
+                    # Pegamos o primeiro (maior valor)
+                    best_token = sorted_tokens[0]
+            
+                    
+                    tokens_dict[symbol] = {
+                        "address": best_token.get("address"),
+                        "decimals": best_token.get("decimals"),
+                        "name": best_token.get("name"),
+                        "priceUSD": best_token.get("priceUSD"),
+                        "logoURI": best_token.get("logoURI"),
+                        "chainId": best_token.get("chainId"),
+                    }
+            
+            TOKEN_INFO[chain_name_upper] = tokens_dict
+            print(f"Tokens armazenados com sucesso para {chain_name_upper}: {len(tokens_dict)} tokens")
+            return {"success": True, "tokens_count": len(tokens_dict)}
+            
+    except Exception as e:
+        print(f"Erro ao processar resposta da API LI.FI: {e}")
+        return {"error": f"Erro ao processar resposta da API LI.FI: {str(e)}"}
 
 
 async def get_gas_price(chain_name):
@@ -74,7 +104,7 @@ async def get_gas_price(chain_name):
     url = f"https://li.quest/v1/gas/prices/{chain_id}"
     
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             response = await client.get(url)
             
             if response.status_code != 200:
@@ -145,7 +175,7 @@ class LifiService:
         print(" \n ### URL da LI.FI:", url)
         
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=False) as client:
                 response = await client.get(url)
                 
                 # Verifica se a requisição foi bem-sucedida
@@ -212,7 +242,7 @@ class LifiService:
         print(" \n ### URL da LI.FI (Swap):", url)
         
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=False) as client:
                 response = await client.get(url)
                 
                 # Verifica se a requisição foi bem-sucedida

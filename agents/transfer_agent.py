@@ -49,7 +49,7 @@ def is_native_token(token_symbol, chain):
 
 def get_estimated_gas(chain, is_native):
     """
-    Retorna estimativa de gas baseada na rede e tipo de token
+    Retorna estimativa de gas baseada na rede e tipo de token, em formato HEX
     """
     base_gas = {
         "ETH": 21000,    # Ethereum
@@ -66,20 +66,25 @@ def get_estimated_gas(chain, is_native):
 
     chain_upper = chain.upper()
     if is_native:
-        return str(base_gas.get(chain_upper, 21000))
+        gas_value = base_gas.get(chain_upper, 21000)
     else:
-        return str(erc20_gas.get(chain_upper, 65000))
+        gas_value = erc20_gas.get(chain_upper, 65000)
+    return hex(gas_value)
 
 
 def calculate_gas_cost_usd(gas_price, estimated_gas, token_price_usd=0):
     """
     Calcula o custo do gas em USD
+    estimated_gas deve estar em hexadecimal (ex: '0x5208')
     """
     gas_price_decimal = int(gas_price, 16)
     gas_price_eth = float(gas_price_decimal) / (10 ** 18)
 
+
+    estimated_gas_decimal = int(estimated_gas, 16)
+
     # Calcula custo total em ETH
-    total_gas_eth = gas_price_eth * float(estimated_gas)
+    total_gas_eth = gas_price_eth * estimated_gas_decimal
     # Calcula custo total em USD
     total_cost_usd = total_gas_eth * token_price_usd
     return str(round(total_cost_usd, 6))

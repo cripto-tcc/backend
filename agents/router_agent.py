@@ -77,4 +77,4 @@ class RouterAgent:
             else:
                 yield "Intenção não suportada no momento."
         except Exception:
-            yield "❌ Erro interno do servidor. Tente novamente."
+            yield "❌ Internal server error. Please try again."

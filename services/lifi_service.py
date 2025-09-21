@@ -132,10 +132,31 @@ def convert_quote_to_human_readable(quote, from_token_decimals, to_token_decimal
         except Exception:
             return value
 
+    # Converte valores no nível raiz (se existirem)
     if 'fromAmount' in quote:
         quote['fromAmount'] = convert(quote['fromAmount'], from_token_decimals)
     if 'toAmount' in quote:
         quote['toAmount'] = convert(quote['toAmount'], to_token_decimals)
+    
+    # Converte valores dentro de 'estimate' e copia para o nível raiz
+    if 'estimate' in quote and isinstance(quote['estimate'], dict):
+        estimate = quote['estimate']
+        
+        # Converte valores dentro de estimate
+        if 'fromAmount' in estimate:
+            converted_from = convert(estimate['fromAmount'], from_token_decimals)
+            estimate['fromAmount'] = converted_from
+            # Adiciona no nível raiz para o Gemini usar
+            quote['fromAmount'] = converted_from
+            
+        if 'toAmount' in estimate:
+            converted_to = convert(estimate['toAmount'], to_token_decimals)
+            estimate['toAmount'] = converted_to
+            # Adiciona no nível raiz para o Gemini usar
+            quote['toAmount'] = converted_to
+            
+        if 'toAmountMin' in estimate:
+            estimate['toAmountMin'] = convert(estimate['toAmountMin'], to_token_decimals)
 
     return quote
 

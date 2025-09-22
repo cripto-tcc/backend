@@ -15,26 +15,27 @@ class RouterAgent:
         try:
             result = await self.gemini_service.classify_intent_and_extract(user_request.input)
             intent = result.get("intent")
+            language = result.get("language", "pt")  # Default para português
 
             if intent == "cotacao":
                 quote = await self.quote_agent.get_quote(user_request, result)
                 # Verifica se houve erro na cotação
                 if "error" in quote:
-                    yield f"❌ Erro: {quote['error']}"
+                    yield f"❌ Error: {quote['error']}"
                     return
-                async for chunk in self.gemini_service.generate_friendly_message(quote):
+                async for chunk in self.gemini_service.generate_friendly_message(quote, language):
                     yield chunk
             elif intent == "swap":
                 swap_result = await self.swap_agent.get_swap(user_request, result)
                 # Verifica se houve erro no swap
                 if "error" in swap_result:
-                    yield f"❌ Erro: {swap_result['error']}"
+                    yield f"❌ Error: {swap_result['error']}"
                     return
                 
                 # Se for dados estruturados de swap, gera mensagem e retorna dados
                 if swap_result.get("type") == "swap_data":
                     # Gera mensagem amigável
-                    async for chunk in self.gemini_service.generate_swap_message(swap_result["data"]):
+                    async for chunk in self.gemini_service.generate_swap_message(swap_result["data"], language):
                         yield chunk
                     # Retorna dados da transação
                     yield {
@@ -44,7 +45,7 @@ class RouterAgent:
                 else:
                     # Fallback para dados antigos
                     async for chunk in self.gemini_service.generate_swap_message(
-                        swap_result
+                        swap_result, language
                     ):
                         yield chunk
             elif intent == "transferencia":
@@ -53,14 +54,14 @@ class RouterAgent:
                 )
                 # Verifica se houve erro na transferência
                 if "error" in transfer_result:
-                    yield f"❌ Erro: {transfer_result['error']}"
+                    yield f"❌ Error: {transfer_result['error']}"
                     return
 
                 # Se for dados estruturados de transferência, gera mensagem e retorna dados
                 if transfer_result.get("type") == "transfer_data":
                     # Gera mensagem amigável
                     async for chunk in self.gemini_service.generate_transfer_message(
-                        transfer_result["data"]
+                        transfer_result["data"], language
                     ):
                         yield chunk
                     # Retorna dados da transação
@@ -71,10 +72,10 @@ class RouterAgent:
                 else:
                     # Fallback para dados antigos
                     async for chunk in self.gemini_service.generate_transfer_message(
-                        transfer_result
+                        transfer_result, language
                     ):
                         yield chunk
             else:
-                yield "Intenção não suportada no momento."
+                yield "Intent not currently supported."
         except Exception:
-            yield "❌ Erro interno do servidor. Tente novamente."
+            yield "❌ Internal server error. Please try again."

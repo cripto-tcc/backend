@@ -94,23 +94,6 @@ async def process_request(request: Request):
 async def update_message_tracking(message_id: int, request: Request):
     """Atualiza qualquer propriedade de tracking de uma mensagem"""
     try:
-        # Validação de segurança - verifica CORS origin
-        origin_header = request.headers.get('origin', '')
-        allowed_origins = [
-            'http://localhost:5173',  # Frontend local
-            'http://localhost:3000',  # Frontend local alternativo
-            'http://127.0.0.1:5173',
-            'http://127.0.0.1:3000',
-            # Adicione aqui os domínios de produção quando necessário
-            # 'https://seudominio.com'
-        ]
-        
-        if origin_header not in allowed_origins:
-            raise HTTPException(
-                status_code=403, 
-                detail="Acesso negado: Origin não autorizado"
-            )
-        
         # Obtém os dados do body
         body = await request.json()
         

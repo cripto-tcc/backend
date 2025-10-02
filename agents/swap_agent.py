@@ -1,19 +1,6 @@
 from services.lifi_service import LifiService, TOKEN_INFO, convert_quote_to_human_readable
 from services.lifi_service import fetch_and_store_tokens
-
-
-def is_native_token(token_symbol, chain):
-    """
-    Verifica se o token é nativo da rede
-    """
-    native_tokens = {
-        "ETH": ["ETH"],
-        "BAS": ["ETH"],
-        "POL": ["MATIC"]
-    }
-
-    chain_upper = chain.upper()
-    return token_symbol.upper() in native_tokens.get(chain_upper, [])
+from services.balance_validator import validate_sufficient_balance, is_native_token
 
 
 def filter_swap_fields(swap_data):
@@ -70,6 +57,20 @@ class SwapAgent:
             return {"error": f"Token {from_token} não encontrado na rede {chain}."}
         if not to_token_info:
             return {"error": f"Token {to_token} não encontrado na rede {chain}."}
+
+        # Valida se tem saldo suficiente do token de origem para o swap
+        from_amount = extracted_data.get("fromAmount", "")
+        if from_amount:
+            balance_validation = await validate_sufficient_balance(
+                user_request.walletAddress, 
+                from_token, 
+                from_amount, 
+                chain, 
+                include_gas_fee=False  # Para swaps, o gas fee não é do mesmo token
+            )
+            
+            if not balance_validation["success"]:
+                return {"error": balance_validation["error"]}
 
         from_token_decimals = from_token_info.get("decimals", 6)
         to_token_decimals = to_token_info.get("decimals", 6)

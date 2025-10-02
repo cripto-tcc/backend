@@ -3,6 +3,7 @@ from services.lifi_service import (
     fetch_and_store_tokens,
     get_gas_price
 )
+from services.balance_validator import validate_sufficient_balance, is_native_token, get_estimated_gas, get_gas_price_with_validation
 import aiohttp
 
 
@@ -63,45 +64,6 @@ async def get_native_token_price_usd(chain):
             return price
 
 
-def is_native_token(token_symbol, chain):
-    """
-    Verifica se o token é nativo da rede
-    """
-    native_tokens = {
-        "ETH": ["ETH"],
-        "BAS": ["ETH"],
-        "POL": ["MATIC"]
-    }
-
-    chain_upper = chain.upper()
-    return token_symbol.upper() in native_tokens.get(chain_upper, [])
-
-
-def get_estimated_gas(chain, is_native):
-    """
-    Retorna estimativa de gas baseada na rede e tipo de token, em formato HEX
-    """
-    base_gas = {
-        "ETH": 21000,    # Ethereum
-        "BAS": 21000,    # Base (L2 da Ethereum)
-        "POL": 21000     # Polygon
-    }
-
-    # Gas para transferências de tokens ERC-20 (se não for nativo)
-    erc20_gas = {
-        "ETH": 65000,    # Ethereum
-        "BAS": 65000,    # Base
-        "POL": 65000     # Polygon
-    }
-
-    chain_upper = chain.upper()
-    if is_native:
-        gas_value = base_gas.get(chain_upper, 21000)
-    else:
-        gas_value = erc20_gas.get(chain_upper, 65000)
-    return hex(gas_value)
-
-
 def calculate_gas_cost_usd(gas_price, estimated_gas, token_price_usd=0):
     """
     Calcula o custo do gas em USD
@@ -110,7 +72,6 @@ def calculate_gas_cost_usd(gas_price, estimated_gas, token_price_usd=0):
     gas_price_decimal = int(gas_price, 16)
     gas_price_eth = float(gas_price_decimal) / (10 ** 18)
 
-
     estimated_gas_decimal = int(estimated_gas, 16)
 
     # Calcula custo total em ETH
@@ -118,22 +79,6 @@ def calculate_gas_cost_usd(gas_price, estimated_gas, token_price_usd=0):
     # Calcula custo total em USD
     total_cost_usd = total_gas_eth * token_price_usd
     return str(round(total_cost_usd, 6))
-
-
-async def get_gas_price_with_validation(chain):
-    """
-    Busca gas price da API e valida a resposta
-    """
-    gas_price_data = await get_gas_price(chain)
-    if "error" in gas_price_data:
-        return {"error": f"Erro ao buscar gas price: "
-                f"{gas_price_data['error']}"}
-
-    gas_price = gas_price_data.get("gasPrice")
-    if not gas_price:
-        return {"error": "Gas price não encontrado na resposta da API"}
-
-    return {"gasPrice": gas_price}
 
 
 async def create_transaction_data(
@@ -248,6 +193,19 @@ class TransferAgent:
         is_valid, validation_message = validate_wallet_address(to_address)
         if not is_valid:
             return {"error": f"Endereço de destino inválido: {validation_message}"}
+
+        # Valida se tem saldo suficiente (incluindo gas fee para tokens nativos)
+        is_native = is_native_token(token_symbol, chain)
+        balance_validation = await validate_sufficient_balance(
+            from_address, 
+            token_symbol, 
+            amount, 
+            chain, 
+            include_gas_fee=is_native  # Considera gas fee apenas para tokens nativos
+        )
+        
+        if not balance_validation["success"]:
+            return {"error": balance_validation["error"]}
 
         # Cria dados de transação
         transfer_data = await create_transaction_data(

@@ -6,6 +6,36 @@ from services.lifi_service import (
 import aiohttp
 
 
+def validate_wallet_address(address):
+    """
+    Valida se o endereço da carteira está no formato correto.
+    Para ETH, Polygon e Base, deve ter exatamente 42 caracteres (0x + 40 hex).
+    """
+    if not address:
+        return False, "Endereço não fornecido."
+    
+    if not isinstance(address, str):
+        return False, "Endereço deve ser uma string."
+    
+    # Remove espaços em branco
+    address = address.strip()
+    
+    # Verifica se tem exatamente 42 caracteres
+    if len(address) != 42:
+        return False, f"Endereço deve ter exatamente 42 caracteres. Fornecido: {len(address)} caracteres."
+    
+    # Verifica se começa com '0x'
+    if not address.startswith('0x'):
+        return False, "Endereço deve começar com '0x'."
+    
+    # Verifica se os 40 caracteres após '0x' são hexadecimais
+    hex_part = address[2:]
+    if not all(c in '0123456789abcdefABCDEF' for c in hex_part):
+        return False, "Endereço contém caracteres inválidos. Deve conter apenas números e letras A-F."
+    
+    return True, "Endereço válido."
+
+
 async def get_native_token_price_usd(chain):
     """
     Busca preço do token nativo da rede em USD usando CoinGecko API
@@ -213,6 +243,11 @@ class TransferAgent:
             return {"error": "Token não especificado."}
         if not amount:
             return {"error": "Quantidade não especificada."}
+
+        # Valida o endereço de destino
+        is_valid, validation_message = validate_wallet_address(to_address)
+        if not is_valid:
+            return {"error": f"Endereço de destino inválido: {validation_message}"}
 
         # Cria dados de transação
         transfer_data = await create_transaction_data(

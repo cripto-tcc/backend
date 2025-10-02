@@ -274,7 +274,7 @@ class GeminiService:
             "\n"
             "# IMPORTANTE - Analise o tipo de erro:\n"
             "\n"
-            "## Se for ERRO DE VALIDAÇÃO/ENTRADA DO USUÁRIO (endereços inválidos, formatos incorretos, etc.):\n"
+            "## Se for ERRO DE VALIDAÇÃO/ENTRADA DO USUÁRIO (endereços inválidos, formatos incorretos, saldos insuficientes, etc.):\n"
             "- Seja educativo e didático\n"
             "- Explique claramente qual foi o problema\n"
             "- Ensine o formato correto esperado\n"
@@ -282,6 +282,14 @@ class GeminiService:
             "- NÃO trate como erro do sistema\n"
             "- Deixe claro que é algo que o usuário precisa corrigir\n"
             "- Use emojis para tornar visual: ❌ para problema, 📋 para instruções, ✅ para exemplo correto\n"
+            "\n"
+            "## Se for ERRO DE CARTEIRA/INTERFACE (User rejected, Transaction failed, etc.):\n"
+            "- Seja empático e compreensivo\n"
+            "- Explique que o usuário cancelou ou rejeitou a operação\n"
+            "- Tranquilize que isso é normal e seguro\n"
+            "- Explique que podem tentar novamente quando quiserem\n"
+            "- NÃO trate como erro técnico\n"
+            "- Use emojis reconfortantes: 🔒 para segurança, 👤 para ação do usuário\n"
             "\n"
             "## Se for ERRO TÉCNICO/INTERNO DO SISTEMA:\n"
             "- Seja empático e compreensivo\n"
@@ -299,6 +307,11 @@ class GeminiService:
             "✅ Exemplo: 0x1234567890123456789012345678901234567890\n"
             "Por favor, verifique o endereço e tente novamente!\n"
             "\n"
+            "**Para erro de carteira/usuário:**\n"
+            "🔒 Você cancelou a transação com segurança!\n"
+            "👤 Isso é completamente normal - você está no controle total das suas transações.\n"
+            "Quando estiver pronto, pode tentar novamente a qualquer momento.\n"
+            "\n"
             "**Para erro técnico:**\n"
             "🤖 Ops! Tivemos um probleminha técnico temporário...\n"
             "Nossa equipe já está trabalhando na correção. Tente novamente em alguns minutinhos!\n"
@@ -314,6 +327,73 @@ class GeminiService:
         )
 
         print(f"\n\n !!!!!! Prompt enviado ao Gemini (generate_error_response) para idioma: '{language}'\n\n")
+        
+        # Gemini API uses generate_content for streaming as well
+        response_stream = await self.model.generate_content_async(prompt, stream=True)
+        
+        async for chunk in response_stream:
+            if chunk.text: # Check if text is available in the chunk
+                yield chunk.text
+
+    async def generate_success_message(self, transaction_hash, transaction_type="transaction", language="pt"):
+        """
+        Gera uma mensagem de sucesso amigável e educativa para transações bem-sucedidas
+        """
+        prompt = (
+            f"Uma transação blockchain foi executada com SUCESSO! "
+            f"IMPORTANTE: Responda no idioma detectado: {language}.\n"
+            "\n"
+            "# Dados da transação:\n"
+            f"- Hash da transação: {transaction_hash}\n"
+            f"- Tipo de operação: {transaction_type}\n"
+            "\n"
+            "# Seu papel:\n"
+            "Você é um assistente especializado em operações blockchain. Precisa parabenizar o usuário pelo sucesso de forma simples e clara.\n"
+            "\n"
+            "# Instruções OBRIGATÓRIAS:\n"
+            "- Seja entusiasmado e positivo\n"
+            "- Parabenize o sucesso da operação de forma genérica\n"
+            "- SEMPRE mostre o hash COMPLETO da transação (não resumido)\n"
+            "- Explique de forma simples o que é o hash\n"
+            "- Informe que a transação está sendo processada E que tudo ocorreu bem\n"
+            "- SEMPRE mencione que demora alguns minutos (1-5 min) e que é normal\n"
+            "- Tranquilize o usuário que o processo foi bem-sucedido\n"
+            "- Use emojis moderadamente: 🎉 ✅ 🔗 ⏳ 🕐\n"
+            "- Mantenha linguagem simples e acessível\n"
+            "- NÃO mencione protocolos específicos (SushiSwap, Uniswap, etc.)\n"
+            "- NÃO use termos técnicos como DeFi, DEX, etc.\n"
+            "- Foque na ação do usuário (transferência, troca, etc.)\n"
+            "- Seja conciso mas informativo\n"
+            "\n"
+            "# O que NÃO fazer:\n"
+            "- NÃO mencionar SushiSwap, Uniswap ou outros protocolos\n"
+            "- NÃO resumir o hash da transação\n"
+            "- NÃO usar jargões técnicos desnecessários\n"
+            "- NÃO fazer a mensagem muito longa\n"
+            "\n"
+            "# Elementos que DEVE incluir:\n"
+            "- Parabéns simples e diretos\n"
+            "- Hash COMPLETO da transação\n"
+            "- Explicação básica do hash\n"
+            "- Status de processamento com tempo estimado (1-5 minutos)\n"
+            "- Tranquilização que tudo ocorreu bem\n"
+            "- Explicação que a demora é normal\n"
+            "- Mensagem positiva de encerramento\n"
+            "\n"
+            "# Exemplo de estrutura (adapte ao idioma):\n"
+            "🎉 **Parabéns! Sua transação foi enviada com sucesso!** ✅\n"
+            "\n"
+            "🔗 **Hash da transação:**\n"
+            "`{transaction_hash}`\n"
+            "\n"
+            "💡 Este código é o comprovante único da sua operação na blockchain!\n"
+            "\n"
+            "⏳ **Status:** Sua transação foi enviada com sucesso e está sendo processada pela rede blockchain.\n"
+            "🕐 **Tempo estimado:** Aguarde de 1 a 5 minutos para confirmação final - isso é completamente normal!\n"
+            "✅ **Tudo ocorreu perfeitamente** - agora é só aguardar a rede confirmar sua operação.\n"
+            "\n"
+            "Responda de forma celebrativa mas concisa!"
+        )
         
         # Gemini API uses generate_content for streaming as well
         response_stream = await self.model.generate_content_async(prompt, stream=True)

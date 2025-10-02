@@ -111,6 +111,68 @@ async def update_message_tracking(message_id: int, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar mensagem: {str(e)}")
 
+@app.post("/humanize-error")
+async def humanize_error(request: Request):
+    """Endpoint para humanizar erros de UI usando o Gemini"""
+    try:
+        data = await request.json()
+        error_message = data.get("error_message", "")
+        language = data.get("language", "pt")
+        
+        if not error_message:
+            raise HTTPException(status_code=400, detail="Campo 'error_message' é obrigatório")
+        
+        async def generate_humanized_error():
+            async for chunk in router_agent.gemini_service.generate_error_response(
+                language=language, 
+                error_context=f"Erro de interface/carteira: {error_message}"
+            ):
+                yield f"data: {json.dumps({'content': chunk})}\n\n"
+            yield f"data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_humanized_error(),
+            media_type="text/plain",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao humanizar erro: {str(e)}")
+
+@app.post("/humanize-success")
+async def humanize_success(request: Request):
+    """Endpoint para gerar mensagens de sucesso amigáveis usando o Gemini"""
+    try:
+        data = await request.json()
+        transaction_hash = data.get("transaction_hash", "")
+        transaction_type = data.get("transaction_type", "transaction")
+        language = data.get("language", "pt")
+        
+        if not transaction_hash:
+            raise HTTPException(status_code=400, detail="Campo 'transaction_hash' é obrigatório")
+        
+        async def generate_success_message():
+            async for chunk in router_agent.gemini_service.generate_success_message(
+                transaction_hash=transaction_hash,
+                transaction_type=transaction_type,
+                language=language
+            ):
+                yield f"data: {json.dumps({'content': chunk})}\n\n"
+            yield f"data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_success_message(),
+            media_type="text/plain",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar mensagem de sucesso: {str(e)}")
+
 @app.get("/test/messages")
 async def test_get_messages():
     """Rota para verificar as mensagens salvas"""

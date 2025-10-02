@@ -208,3 +208,108 @@ class GeminiService:
         async for chunk in response_stream:
             if chunk.text: # Check if text is available in the chunk
                 yield chunk.text
+
+    async def generate_helpful_response(self, user_input, language="pt"):
+        """
+        Gera uma resposta amigável e orientativa para mensagens que não são das funcionalidades principais
+        """
+        prompt = (
+            f"O usuário enviou a seguinte mensagem: '{user_input}'. "
+            f"Esta mensagem não corresponde às funcionalidades principais da plataforma (cotações, swaps ou transferências de tokens). "
+            f"IMPORTANTE: Responda no idioma detectado: {language}.\n"
+            "\n"
+            "# Seu papel:\n"
+            "Você é um assistente especializado em operações blockchain que ajuda usuários com:\n"
+            "- 📊 **Cotações de tokens** - Ver preços atuais de troca entre diferentes criptomoedas\n"
+            "- 🔄 **Swaps de tokens** - Trocar uma criptomoeda por outra\n"
+            "- 📤 **Transferências** - Enviar tokens para outros endereços\n"
+            "\n"
+            "# Instruções:\n"
+            "- Responda de forma amigável e acolhedora à mensagem do usuário\n"
+            "- Se for uma saudação (oi, olá, hello, etc.), cumprimente de volta\n"
+            "- Se for uma pergunta geral, responda brevemente de forma educada\n"
+            "- SEMPRE apresente as funcionalidades disponíveis de forma atrativa\n"
+            "- Dê exemplos práticos de como usar cada funcionalidade\n"
+            "- Use emojis para tornar a resposta mais visual e amigável\n"
+            "- Seja conciso mas informativo\n"
+            "- Encoraje o usuário a experimentar as funcionalidades\n"
+            "- Na hora de apresentar exemplos, se limite a usar exemplos de tokens disponiveis nas redes ETH, Base e Polygon\n"
+            "- Não forneça conselhos financeiros em nenhuma situação\n"
+            "\n"
+            "# Exemplos de como apresentar as funcionalidades:\n"
+            "**Para cotações:** \"Quer saber quanto vale 1 BTC em USDC?\"\n"
+            "**Para swaps:** \"Precisa trocar ETH por USDT?\"\n"
+            "**Para transferências:** \"Quer enviar tokens para outro endereço?\"\n"
+            "\n"
+            "# Estrutura sugerida:\n"
+            "1. Responda à mensagem do usuário de forma apropriada\n"
+            "2. Apresente as funcionalidades disponíveis com exemplos\n"
+            "3. Convide o usuário a experimentar\n"
+            "\n"
+            "Responda de forma natural e conversacional!"
+        )
+
+        print(f"\n\n !!!!!! Prompt enviado ao Gemini (generate_helpful_response) para input: '{user_input}'\n\n")
+        
+        # Gemini API uses generate_content for streaming as well
+        response_stream = await self.model.generate_content_async(prompt, stream=True)
+        
+        async for chunk in response_stream:
+            if chunk.text: # Check if text is available in the chunk
+                yield chunk.text
+
+    async def generate_error_response(self, language="pt", error_context=None):
+        """
+        Gera uma resposta amigável para situações de erro interno do sistema
+        """
+        prompt = (
+            f"Ocorreu um erro interno no sistema enquanto o usuário tentava usar a plataforma de operações blockchain. "
+            f"IMPORTANTE: Responda no idioma detectado: {language}.\n"
+            "\n"
+            "# Contexto do erro:\n"
+            f"- {error_context if error_context else 'Erro interno não especificado'}\n"
+            "\n"
+            "# Seu papel:\n"
+            "Você é um assistente especializado em operações blockchain. Precisa informar ao usuário sobre o problema de forma amigável e reconfortante.\n"
+            "\n"
+            "# Instruções:\n"
+            "- Seja empático e compreensivo\n"
+            "- Peça desculpas pelo inconveniente de forma genuína\n"
+            "- Explique brevemente que houve um problema técnico temporário\n"
+            "- Assegure que a equipe está trabalhando para resolver\n"
+            "- Sugira que o usuário tente novamente em alguns minutos\n"
+            "- Ofereça alternativas ou próximos passos\n"
+            "- Use emojis para tornar a mensagem mais humana (mas sem exagerar)\n"
+            "- Mantenha um tom profissional mas caloroso\n"
+            "- NÃO mencione detalhes técnicos do erro\n"
+            "- Termine de forma positiva e encorajadora\n"
+            "\n"
+            "# Elementos que DEVE incluir:\n"
+            "- Pedido sincero de desculpas\n"
+            "- Explicação simples do problema\n"
+            "- Orientação sobre o que fazer\n"
+            "- Reafirmação de que você está aqui para ajudar\n"
+            "\n"
+            "# Exemplo de estrutura (adapte ao idioma):\n"
+            "🤖 Ops! Peço desculpas, mas algo não funcionou como esperado do nosso lado...\n"
+            "\n"
+            "Tivemos um probleminha técnico temporário que impediu o processamento da sua solicitação. Nossa equipe já está ciente e trabalhando na correção.\n"
+            "\n"
+            "💡 **O que você pode fazer:**\n"
+            "- Tente novamente em alguns minutinhos\n"
+            "- Se o problema persistir, verifique sua conexão\n"
+            "- Estou aqui para ajudar com qualquer dúvida\n"
+            "\n"
+            "Obrigado pela paciência! 🙏\n"
+            "\n"
+            "Responda de forma natural, calorosa e profissional!"
+        )
+
+        print(f"\n\n !!!!!! Prompt enviado ao Gemini (generate_error_response) para idioma: '{language}'\n\n")
+        
+        # Gemini API uses generate_content for streaming as well
+        response_stream = await self.model.generate_content_async(prompt, stream=True)
+        
+        async for chunk in response_stream:
+            if chunk.text: # Check if text is available in the chunk
+                yield chunk.text

@@ -21,7 +21,9 @@ class RouterAgent:
                 quote = await self.quote_agent.get_quote(user_request, result)
                 # Verifica se houve erro na cotação
                 if "error" in quote:
-                    yield f"❌ Error: {quote['error']}"
+                    # Usa o método existente com contexto específico
+                    async for chunk in self.gemini_service.generate_error_response(language, f"Erro na cotação: {quote['error']}"):
+                        yield chunk
                     return
                 async for chunk in self.gemini_service.generate_friendly_message(quote, language):
                     yield chunk
@@ -29,7 +31,9 @@ class RouterAgent:
                 swap_result = await self.swap_agent.get_swap(user_request, result)
                 # Verifica se houve erro no swap
                 if "error" in swap_result:
-                    yield f"❌ Error: {swap_result['error']}"
+                    # Usa o método existente com contexto específico
+                    async for chunk in self.gemini_service.generate_error_response(language, f"Erro no swap: {swap_result['error']}"):
+                        yield chunk
                     return
                 
                 # Se for dados estruturados de swap, gera mensagem e retorna dados
@@ -54,7 +58,9 @@ class RouterAgent:
                 )
                 # Verifica se houve erro na transferência
                 if "error" in transfer_result:
-                    yield f"❌ Error: {transfer_result['error']}"
+                    # Usa o método existente com contexto específico
+                    async for chunk in self.gemini_service.generate_error_response(language, f"Erro na transferência: {transfer_result['error']}"):
+                        yield chunk
                     return
 
                 # Se for dados estruturados de transferência, gera mensagem e retorna dados
@@ -76,6 +82,14 @@ class RouterAgent:
                     ):
                         yield chunk
             else:
-                yield "Intent not currently supported."
-        except Exception:
-            yield "❌ Internal server error. Please try again."
+                # Para mensagens que não são das funcionalidades principais, 
+                # gera uma resposta amigável e orientativa
+                async for chunk in self.gemini_service.generate_helpful_response(user_request.input, language):
+                    yield chunk
+        except Exception as e:
+            # Log do erro para debugging (sem exposição ao usuário)
+            print(f"Erro interno no RouterAgent: {str(e)}")
+            
+            # Gera resposta amigável de erro para o usuário
+            async for chunk in self.gemini_service.generate_error_response(language, f"Erro durante processamento: {type(e).__name__}"):
+                yield chunk

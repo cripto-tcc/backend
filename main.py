@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from models.request_model import UserRequest
 from agents.router_agent import RouterAgent
 from services.supabase_service import supabase_service
+from services.moralis_service import moralis_service
 from dotenv import load_dotenv
 import json
 import os
@@ -190,3 +191,47 @@ async def test_get_messages():
             "success": False,
             "message": f"Erro ao buscar mensagens: {str(e)}"
         }
+
+@app.get("/wallets/{wallet}/history")
+async def get_wallet_history(
+    wallet: str,
+    chain: str = Query(..., description="Cadeia blockchain (ex: base, eth, polygon)"),
+    limit: int = Query(5, description="Número máximo de transações a retornar")
+):
+    """
+    Busca o histórico de transações de uma carteira via Moralis
+    
+    Args:
+        wallet: Endereço da carteira (path parameter)
+        chain: Cadeia blockchain (ex: base, eth, polygon) - query parameter obrigatório
+        limit: Número máximo de transações a retornar (padrão: 5) - query parameter opcional
+    
+    Returns:
+        dict: Resposta da API da Moralis
+    """
+    try:
+        result = await moralis_service.get_wallet_history(wallet, chain, limit)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
+
+@app.get("/wallets/{wallet}/tokens")
+async def get_wallet_tokens(
+    wallet: str,
+    chain: str = Query(..., description="Cadeia blockchain (ex: base, eth, polygon)")
+):
+    """
+    Busca os tokens de uma carteira via Moralis
+    
+    Args:
+        wallet: Endereço da carteira (path parameter)
+        chain: Cadeia blockchain (ex: base, eth, polygon) - query parameter obrigatório
+    
+    Returns:
+        dict: Resposta da API da Moralis
+    """
+    try:
+        result = await moralis_service.get_wallet_tokens(wallet, chain)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar tokens: {str(e)}")

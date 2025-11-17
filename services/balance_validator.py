@@ -109,7 +109,7 @@ def is_native_token(token_symbol, chain):
     native_tokens = {
         "ETH": ["ETH"],
         "BAS": ["ETH"],
-        "POL": ["MATIC"]
+        "POL": ["POL"]
     }
 
     chain_upper = chain.upper()

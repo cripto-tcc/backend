@@ -17,7 +17,7 @@ async def get_token_balance(wallet_address, token_address, token_decimals, chain
         rpc_urls = {
             "ETH": "https://eth.llamarpc.com",
             "BAS": "https://mainnet.base.org", 
-            "POL": "https://polygon.llamarpc.com"
+            "POL": "https://polygon-mainnet.g.alchemy.com/v2/YfUJiJEWCYnPD4__uGKAq68bUEB9-D4O"
         }
         
         chain_upper = chain.upper()
@@ -66,8 +66,28 @@ async def get_token_balance(wallet_address, token_address, token_decimals, chain
                     return {"error": f"Erro RPC: {data['error'].get('message', 'Desconhecido')}"}
                 
                 # Converte resultado hex para decimal
-                balance_hex = data.get("result", "0x0")
-                balance_wei = int(balance_hex, 16)
+                balance_hex = data.get("result")
+                
+                # Debug: log da resposta para facilitar troubleshooting
+                if not balance_hex or balance_hex == "0x":
+                    print(f"⚠️ DEBUG: Resposta RPC inesperada para {chain} - result: {balance_hex}, data completo: {data}")
+                
+                # Valida se o resultado existe e não está vazio
+                if not balance_hex:
+                    return {"error": "Resposta RPC vazia ou inválida"}
+                
+                # Remove espaços e valida formato
+                balance_hex = balance_hex.strip()
+                
+                # Se for apenas "0x" sem valor, trata como zero
+                if balance_hex == "0x" or len(balance_hex) <= 2:
+                    balance_hex = "0x0"
+                
+                # Valida se é um hex válido antes de converter
+                try:
+                    balance_wei = int(balance_hex, 16)
+                except ValueError as e:
+                    return {"error": f"Erro ao converter saldo hexadecimal '{balance_hex}': {str(e)}"}
                 
                 # Converte para unidade legível
                 balance_decimal = balance_wei / (10 ** token_decimals)
@@ -198,10 +218,23 @@ async def validate_sufficient_balance(wallet_address, token_symbol, amount, chai
                 gas_price = gas_price_result["gasPrice"]
                 estimated_gas = get_estimated_gas(chain, is_native)
                 
-                # Calcula gas em decimal
-                gas_price_decimal = int(gas_price, 16) / (10 ** 18)
-                gas_limit_decimal = int(estimated_gas, 16)
-                total_gas_cost = gas_price_decimal * gas_limit_decimal
+                # Calcula gas em decimal com validação
+                try:
+                    # Valida e normaliza gas_price
+                    if not gas_price or gas_price.strip() == "0x" or len(gas_price.strip()) <= 2:
+                        gas_price = "0x0"
+                    gas_price_decimal = int(gas_price.strip(), 16) / (10 ** 18)
+                    
+                    # Valida e normaliza estimated_gas
+                    if not estimated_gas or estimated_gas.strip() == "0x" or len(estimated_gas.strip()) <= 2:
+                        estimated_gas = "0x0"
+                    gas_limit_decimal = int(estimated_gas.strip(), 16)
+                    
+                    total_gas_cost = gas_price_decimal * gas_limit_decimal
+                except (ValueError, AttributeError) as e:
+                    # Se houver erro na conversão, continua sem considerar gas fee
+                    print(f"⚠️ Aviso: Erro ao calcular gas fee: {e}. Continuando sem considerar gas fee.")
+                    total_gas_cost = 0
                 
                 # Verifica se tem saldo para operação + gas
                 if current_balance < (requested_amount + total_gas_cost):

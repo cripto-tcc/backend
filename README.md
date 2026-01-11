@@ -1,48 +1,70 @@
-<img width="1200" height="1200" alt="image" src="https://github.com/user-attachments/assets/8951885b-1593-49b8-a74a-c90c93a5bbcb" />
+# Cryptocurrency Trading Chatbot Backend
+
+<img width="1200" height="1200" alt="image" src="https://github.com/user-attachments/assets/8b0a0a29-d55e-4a9b-a75d-de4c394f5310" />
 
 
-# Projeto: Backend de Cotações de Criptomoedas com IA
+## Project Summary
 
-Este projeto é um backend em Python usando FastAPI, que processa solicitações de usuários para operações de criptomoedas, especialmente cotações de troca de tokens. Ele utiliza o Gemini 2.0 Flash para entender a intenção do usuário e extrair informações relevantes do texto, e integra com o serviço LI.FI para obter cotações de swaps de tokens.
+This is a **cryptocurrency trading chatbot backend** that enables users to perform cryptocurrency operations through natural language interactions. The system supports various operations including:
 
-## Como funciona
+- **Swaps**: Exchange one cryptocurrency for another
+- **Transfers**: Send cryptocurrencies between wallets
+- **Quotes**: Get real-time exchange rates and conversion estimates
 
-1. O usuário envia uma requisição com:
-   - `walletAddress`: endereço da carteira
-   - `chain`: blockchain desejada (ex: ETH)
-   - `input`: texto livre descrevendo a operação desejada (ex: "Quero trocar 10 BTC por USDC")
-2. O backend usa a o Gemini 2.0 Flash para:
-   - Classificar a intenção do usuário (cotação, swap, transferência, etc.)
-   - Extrair tokens e valores do texto, se necessário
-3. Se a intenção for cotação:
-   - O sistema consulta o LI.FI para obter a cotação de troca entre os tokens informados
-   - O resultado é transformado em uma mensagem amigável para o usuário, usando novamente a Gemini 2.0 Flash
+Users can interact with the system using plain language (e.g., "I want to swap 10 BTC for USDC" or "How many WBTC would I get for 234,000 USDC?"), and the AI-powered backend processes these requests to execute the desired operations.
 
-## Estrutura do Projeto
+---
 
-- `main.py`: ponto de entrada da API FastAPI
-- `agents/`: agentes responsáveis por orquestrar as operações (roteamento e cotação)
-- `services/`: integrações com serviços externos (Gemini 2.0 Flash e LI.FI)
-- `models/`: modelos de dados (ex: UserRequest)
+## Project: Cryptocurrency Quotes Backend with AI
 
-## Como rodar localmente
+This project is a Python backend using FastAPI that processes user requests for cryptocurrency operations, especially token swap quotes. It uses Gemini 2.0 Flash to understand user intent and extract relevant information from text, and integrates with the LI.FI service to obtain token swap quotes.
 
-1. Instale as dependências:
-   pip install -r requirements.txt
+## How it works
 
-2. Configure as variáveis de ambiente:
+1. The user sends a request with:
+   - `walletAddress`: wallet address
+   - `chain`: desired blockchain (e.g., ETH)
+   - `input`: free text describing the desired operation (e.g., "I want to swap 10 BTC for USDC")
+2. The backend uses Gemini 2.0 Flash to:
+   - Classify the user's intent (quote, swap, transfer, etc.)
+   - Extract tokens and values from the text, if necessary
+3. If the intent is a quote:
+   - The system queries LI.FI to obtain the swap quote between the specified tokens
+   - The result is transformed into a user-friendly message using Gemini 2.0 Flash again
 
-   - Crie um arquivo `.env` na raiz do projeto, siga o exemplo da .env.example
+## Project Structure
+
+- `main.py`: FastAPI entry point
+- `agents/`: agents responsible for orchestrating operations (routing and quotes)
+- `services/`: integrations with external services (Gemini 2.0 Flash and LI.FI)
+- `models/`: data models (e.g., UserRequest)
+
+## How to run locally
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Configure environment variables:
+
+   - Create a `.env` file in the project root, following the example from `.env.example`:
      ```
-     CORS_ORIGIN=url-porta-frontend (ex: http://localhost:5173)
-     GEMINI_API_KEY=api-key-gemini
+     CORS_ORIGIN=frontend-url-port (e.g., http://localhost:5173)
+     GEMINI_API_KEY=gemini-api-key
      ```
 
-3. Inicie o servidor FastAPI:
-   uvicorn main:app --reload
-   ou python -m uvicorn main:app --reload (terminais Git Bash on Windows)
+3. Start the FastAPI server:
+```bash
+uvicorn main:app --reload
+```
+   or
+```bash
+python -m uvicorn main:app --reload
+```
+   (for Git Bash on Windows terminals)
 
-## Exemplo de requisição
+## Example request
 
 POST /process
 
@@ -50,8 +72,8 @@ POST /process
 {
   "walletAddress": "0x1234567890abcdef1234567890abcdef12345678",
   "chain": "ETH",
-  "input": "Se eu transformar 234000 USDC em WBTC, quantos wbtc eu teria?"
+  "input": "If I convert 234000 USDC to WBTC, how many wbtc would I have?"
 }
 ```
 
-A resposta será uma mensagem amigável explicando a cotação obtida.
+The response will be a user-friendly message explaining the obtained quote.

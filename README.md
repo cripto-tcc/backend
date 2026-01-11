@@ -1,3 +1,6 @@
+<img width="1200" height="1200" alt="image" src="https://github.com/user-attachments/assets/8951885b-1593-49b8-a74a-c90c93a5bbcb" />
+
+
 # Projeto: Backend de Cotações de Criptomoedas com IA
 
 Este projeto é um backend em Python usando FastAPI, que processa solicitações de usuários para operações de criptomoedas, especialmente cotações de troca de tokens. Ele utiliza o Gemini 2.0 Flash para entender a intenção do usuário e extrair informações relevantes do texto, e integra com o serviço LI.FI para obter cotações de swaps de tokens.
